@@ -1,0 +1,8 @@
+target
+.env
+OCR_sample_data.json
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
