@@ -1,4 +1,5 @@
 # Azure OCR (Cognitive Service Read API v3.2) を使って、画像から文字を読み取る
+特定のフォルダに入っている画像を全てOCRして結果のJSONとプレーンテキストファイルを作成する。
 
 https://qiita.com/c-makitahiroki/items/e3e4a52eb2b92a15fd22
 
@@ -22,6 +23,14 @@ Computer Visionのリソースを作成する。キーとエンドポイント�
 AZURE_SUBSCRIPTION_KEY={キー1の内容}
 AZURE_ENDPOINT={エンドポイントの内容}
 ```
+
+# 環境の作成
+- target
+- output_json
+- output_text
+
+以上3つのフォルダを実行フォルダ内に作成しておく必要がある。スクリプトを編集して変えてもらっても問題ない。
+
 
 # 実行
 
