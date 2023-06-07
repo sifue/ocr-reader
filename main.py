@@ -1,86 +1,83 @@
+import urllib.parse
+import urllib.request
+import base64
+import urllib.error
+import http.client
+import ast
+import os
 from dotenv import load_dotenv
 load_dotenv()
-import os
 
-# OCR対象のファイル名を定義します
-FILE_NAME = r"./target/0011.jpg"
-
-# Computer Visionリソースのサブスクリプションキー、エンドポイント設定
-# サブスクリプションキーとエンドポイントは、リソースグループ作成時に控えておいたキー1,エンドポイントを入力します。
 SUBSCRIPTION_KEY = os.getenv("AZURE_SUBSCRIPTION_KEY")
 ENDPOINT = os.getenv("AZURE_ENDPOINT")
-
-# ホストを設定
 host = ENDPOINT.split("/")[2]
-
-# vision-v3.2のread機能のURLを設定
 text_recognition_url = (ENDPOINT + "vision/v3.2/read/analyze")
 
-# 読み取り用のヘッダー作成
-read_headers = {
-    # サブスクリプションキーの設定
-    "Ocp-Apim-Subscription-Key":SUBSCRIPTION_KEY,
-    # bodyの形式を指定、json=URL/octet-stream=バイナリデータ
-    "Content-Type":"application/octet-stream"
-}
+def call_read_api(host, text_recognition_url, body):
+    '''
+    ReadAPIを呼び出す
 
-# 結果取得用のヘッダー作成
-result_headers = {
-    # サブスクリプションキーの設定
-    "Ocp-Apim-Subscription-Key":SUBSCRIPTION_KEY,
-}
+    Args:
+        host (str): エンドポイント
+        text_recognition_url (str): ReadAPIのURL
+        body (str): 画像ファイルのバイナリデータ
 
-import http.client, urllib.request, urllib.parse
-import urllib.error, base64
-import ast
-
-# Read APIを呼ぶ関数
-def call_read_api(host, text_recognition_url, body, params, read_headers):
-    # Read APIの呼び出し
+    Returns:
+        OL_url (str): Operation Location URL
+    '''
     try:
         conn = http.client.HTTPSConnection(host)
-        # 読み取りリクエスト
+        params = urllib.parse.urlencode({
+            'readingOrder': 'natural',
+        })
+
         conn.request(
-            method = "POST",
-            url = text_recognition_url + "?%s" % params,
-            body = body,
-            headers = read_headers,
+            method="POST",
+            url=text_recognition_url + "?%s" % params,
+            body=body,
+            headers={
+                "Ocp-Apim-Subscription-Key": SUBSCRIPTION_KEY,
+                "Content-Type": "application/octet-stream"
+            },
         )
-
-        # 読み取りレスポンス
         read_response = conn.getresponse()
-        print(read_response.status)
+        # print(read_response.status)
 
-        # レスポンスの中から読み取りのOperation-Location URLを取得
         OL_url = read_response.headers["Operation-Location"]
-
         conn.close()
-        print("read_request:SUCCESS")
+        # print("read_request:SUCCESS")
 
     except Exception as e:
-        print("[ErrNo {0}]{1}".format(e.errno,e.strerror))
-
+        print("[ErrNo {0}]{1}".format(e.errno, e.strerror))
     return OL_url
 
-# OCR結果を取得する関数
-def call_get_read_result_api(host, file_name, OL_url, result_headers):
+
+def call_get_read_result_api(host, OL_url):
+    '''
+    Read Result API を呼び出す
+    結果がなければ、10秒待って再度呼び出す
+
+    Args:
+        host (str): エンドポイント
+        OL_url (str): Operation Location URL
+
+    '''
     result_dict = {}
-    # Read結果取得
     try:
         conn = http.client.HTTPSConnection(host)
 
-        # 読み取り完了/失敗時にFalseになるフラグ
         poll = True
-        while(poll):
+        while (poll):
             if (OL_url == None):
-                print(file_name + ":None Operation-Location")
+                print("None Operation-Location")
                 break
 
-            # 読み取り結果取得
             conn.request(
-                method = "GET",
-                url = OL_url,
-                headers = result_headers,
+                method="GET",
+                url=OL_url,
+                headers={
+                    "Ocp-Apim-Subscription-Key": SUBSCRIPTION_KEY,
+                },
             )
             result_response = conn.getresponse()
             result_str = result_response.read().decode()
@@ -89,7 +86,7 @@ def call_get_read_result_api(host, file_name, OL_url, result_headers):
             if ("analyzeResult" in result_dict):
                 poll = False
                 print("get_result:SUCCESS")
-            elif ("status" in result_dict and 
+            elif ("status" in result_dict and
                   result_dict["status"] == "failed"):
                 poll = False
                 print("get_result:FAILD")
@@ -98,41 +95,58 @@ def call_get_read_result_api(host, file_name, OL_url, result_headers):
         conn.close()
 
     except Exception as e:
-        print("[ErrNo {0}] {1}".format(e.errno,e.strerror))
+        print("[ErrNo {0}] {1}".format(e.errno, e.strerror))
 
     return result_dict
-
 
 if __name__ == "__main__":
     import time
     import json
     import urllib.parse
+    import os
+    from tqdm import tqdm
 
-    # body作成
-    body = open(FILE_NAME,"rb").read()
+    target_directory = "target"
+    output_directory = "output_json"
 
-    # パラメータの指定
-    # 自然な読み取り順序で出力できるオプションを追加
-    params = urllib.parse.urlencode({
-        # Request parameters
-        'readingOrder': 'natural',
-    })
+    def list_files(directory):
+        '''
+        ディレクトリ内のファイル一覧を取得する
+        Args:
+            directory (str): ディレクトリ名
+        Returns:
+            list: ファイル一覧
+        '''
+        return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
 
-    # readAPIを呼んでOperation Location URLを取得
-    OL_url = call_read_api(host, text_recognition_url, body, params, read_headers)
+    # output_jsonにOCR結果のJSONファイルが存在していない画像ファイルを取得
+    image_files = list_files(target_directory)
+    image_base_names = [os.path.splitext(f)[0] for f in image_files]
+    extension_dict = {os.path.splitext(f)[0]: os.path.splitext(f)[1] for f in image_files}
 
-    print(OL_url)
+    json_files = list_files(output_directory)
+    json_base_names = [os.path.splitext(f)[0] for f in json_files]
 
-    # 処理待ち10秒
-    time.sleep(10)
+    target_image_base_names = list(set(image_base_names) - set(json_base_names))
+    target_image_file_names = [f"{name}{extension_dict[name]}" for name in target_image_base_names]
+    target_image_file_names.sort()
 
-    # Read結果取得
-    result_dict = call_get_read_result_api(host, FILE_NAME, OL_url, result_headers)
+    print("target_image_file_names:")
+    print(target_image_file_names)
 
-    # 文字コードの指定
-    encoding = "utf_8_sig"
+    for image_file in tqdm(target_image_file_names):
+        image_file_fullpath = target_directory + os.sep + image_file
 
-    # OCR結果を保存
-    output_json_file = r"./OCR_sample_data.json"
-    with open(output_json_file,"w",encoding = encoding) as f:
-        json.dump(result_dict,f, indent = 3, ensure_ascii = False)
+        body = open(image_file_fullpath, "rb").read()
+        OL_url = call_read_api(host, text_recognition_url, body)
+
+        # print("OL_url:")
+        # print(OL_url)
+
+        # 1回の処理待ち10秒してから、結果を取得する
+        time.sleep(10)
+        result_dict = call_get_read_result_api(host, OL_url)
+
+        json_file_fullpath =  output_directory + os.sep + os.path.splitext(image_file)[0] + ".json"
+        with open(json_file_fullpath, "w", encoding="utf_8_sig") as f:
+            json.dump(result_dict, f, indent=3, ensure_ascii=False)

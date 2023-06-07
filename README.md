@@ -12,7 +12,7 @@ Python 3.9.6
 ```
 pip3 install -r requirements.txt
 ```
-python-dotenv しか利用していないので、独自にインストールしていても大丈夫。
+python-dotenvとtqdmしか利用していないので、独自にインストールしていても大丈夫。
 
 ## Azure Potal での設定と.envの設定
 [https://portal.azure.com/](https://portal.azure.com/) にて、Azure OCR のサブスクリプションを作成して
@@ -25,8 +25,16 @@ AZURE_ENDPOINT={エンドポイントの内容}
 
 # 実行
 
-これで実行。
+これで実行。`target` フォルダに入っている結果のJSONファイルが `output_json` に出力される。
 
 ```
 python3 main.py
 ```
+
+なおさらにJSONのOCRの結果をただのテキストにしたものを取得したい場合には、以下を実行すると `output_text` にテキストファイルが出力される。
+
+```
+python3 json-processer.py
+```
+
+

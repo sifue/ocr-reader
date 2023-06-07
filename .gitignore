@@ -1,4 +1,7 @@
 target
+target_tmp
+output_json
+output_text
 .env
 OCR_sample_data.json
 .DS_Store
