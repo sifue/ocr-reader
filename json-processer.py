@@ -16,11 +16,17 @@ def list_files(directory):
     return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
 
 json_files = list_files(json_directory)
+json_files.sort()
 for json_file in tqdm(json_files):
+    if os.path.splitext(json_file)[1] != ".json":
+        continue
+
     json_file_fullpath = json_directory + os.sep + json_file
     text_file_fullpath = text_directory + os.sep + os.path.splitext(json_file)[0] + ".txt"
 
-    
+    # print("json_file_fullpath:")
+    # print(json_file_fullpath)
+
     with open(json_file_fullpath, 'r', encoding='utf-8-sig') as f:
         data = json.load(f)
 
