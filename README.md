@@ -7,7 +7,7 @@ https://qiita.com/c-makitahiroki/items/e3e4a52eb2b92a15fd22
 
 公式ドキュメントはこちら。
 
-[OCR - Optical Character Recognition]()
+[OCR - Optical Character Recognition](
 https://learn.microsoft.com/en-us/azure/cognitive-services/computer-vision/overview-ocr)
 
 APIの仕様は、以下に準拠。
