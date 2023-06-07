@@ -85,7 +85,7 @@ def call_get_read_result_api(host, OL_url):
 
             if ("analyzeResult" in result_dict):
                 poll = False
-                print("get_result:SUCCESS")
+                # print("get_result:SUCCESS")
             elif ("status" in result_dict and
                   result_dict["status"] == "failed"):
                 poll = False
